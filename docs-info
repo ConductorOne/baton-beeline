@@ -1,0 +1,39 @@
+While developing the connector, please fill out this form. This information is needed to write docs and to help other users set up the connector.
+
+## Connector capabilities
+
+1. What resources does the connector sync?
+   - Users
+   - Organizations
+   - Roles
+
+2. Can the connector provision any resources? If so, which ones? 
+   - Yes, the connector can provision role assignments to users (adding and removing users from roles).
+
+## Connector credentials 
+
+1. What credentials or information are needed to set up the connector? (For example, API key, client ID and secret, domain, etc.)
+   - Base URL (default: https://client.beeline.com)
+   - Beeline Client Site ID
+   - OAuth2 Client ID
+   - OAuth2 Client Secret
+
+2. For each item in the list above: 
+
+   * How does a user create or look up that credential or info?
+     - Base URL: This is typically https://client.beeline.com but may vary depending on the environment.
+     - Beeline Client Site ID: This is provided by Beeline for your specific organization's site.
+     - OAuth2 Client ID and Secret: These need to be requested through Beeline's Customer Operations Manager (COM). Users need to contact their COM to create a change request ticket to scope their needs. Once the change request has been scoped and project assigned, Beeline's Integrations team will create and securely transmit these security credentials.
+
+   * Does the credential need any specific scopes or permissions? If so, list them here.
+     - For organization operations: read:org and write:org
+     - For user operations: read:user and write:user
+     - For role and permission operations: read:iam and write:iam
+     - For provisioning operations (adding/removing users from roles): write:iam is specifically required
+
+   * If applicable: Is the list of scopes or permissions different to sync (read) versus provision (read-write)? If so, list the difference here.
+     - No separate scopes are needed. The Beeline API requires both read and write scopes even for read-only operations.
+     - Note: This is a requirement of the Beeline API itself, not a choice made by this connector.
+
+   * What level of access or permissions does the user need in order to create the credentials? (For example, must be a super administrator, must have access to the admin console, etc.)
+     - The user typically needs to be an administrator of the Beeline platform for their organization.

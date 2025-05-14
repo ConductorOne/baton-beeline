@@ -8,29 +8,54 @@ Check out [Baton](https://github.com/conductorone/baton) to learn more the proje
 
 # Getting Started
 
-## brew
+## Configuration
+
+This connector requires the following configuration:
+
+- `base-url`: The Beeline base URL (default: "https://client.beeline.com")
+- `beeline-client-site-id`: The Beeline client site ID
+- `beeline-client-id`: The OAuth2 client ID for Beeline API access
+- `beeline-client-secret`: The OAuth2 client secret for Beeline API access
+
+You can provide these values as environment variables:
 
 ```
+export BATON_BASE_URL=https://client.beeline.com
+export BATON_BEELINE_CLIENT_SITE_ID=your-site-id
+export BATON_BEELINE_CLIENT_ID=your-client-id
+export BATON_BEELINE_CLIENT_SECRET=your-client-secret
+```
+
+## Installation Options
+
+### Homebrew
+
+```bash
 brew install conductorone/baton/baton conductorone/baton/baton-beeline
 baton-beeline
 baton resources
 ```
 
-## docker
+### Docker
 
-```
-docker run --rm -v $(pwd):/out -e BATON_DOMAIN_URL=domain_url -e BATON_API_KEY=apiKey -e BATON_USERNAME=username ghcr.io/conductorone/baton-beeline:latest -f "/out/sync.c1z"
+```bash
+docker run --rm -v $(pwd):/out \
+  -e BATON_BASE_URL=https://client.beeline.com \
+  -e BATON_BEELINE_CLIENT_SITE_ID=your-site-id \
+  -e BATON_BEELINE_CLIENT_ID=your-client-id \
+  -e BATON_BEELINE_CLIENT_SECRET=your-client-secret \
+  ghcr.io/conductorone/baton-beeline:latest -f "/out/sync.c1z"
+
 docker run --rm -v $(pwd):/out ghcr.io/conductorone/baton:latest -f "/out/sync.c1z" resources
 ```
 
-## source
+### From Source
 
-```
+```bash
 go install github.com/conductorone/baton/cmd/baton@main
 go install github.com/conductorone/baton-beeline/cmd/baton-beeline@main
 
 baton-beeline
-
 baton resources
 ```
 
@@ -38,6 +63,8 @@ baton resources
 
 `baton-beeline` will pull down information about the following resources:
 - Users
+- Organizations
+- Roles
 
 # Contributing, Support and Issues
 
@@ -63,6 +90,10 @@ Available Commands:
   help               Help about any command
 
 Flags:
+      --base-url string              The Beeline base URL ($BATON_BASE_URL) (default "https://client.beeline.com")
+      --beeline-client-site-id string The Beeline client site ID ($BATON_BEELINE_CLIENT_SITE_ID)
+      --beeline-client-id string     The OAuth2 client ID for Beeline API access ($BATON_BEELINE_CLIENT_ID)
+      --beeline-client-secret string The OAuth2 client secret for Beeline API access ($BATON_BEELINE_CLIENT_SECRET)
       --client-id string             The client ID used to authenticate with ConductorOne ($BATON_CLIENT_ID)
       --client-secret string         The client secret used to authenticate with ConductorOne ($BATON_CLIENT_SECRET)
   -f, --file string                  The path to the c1z file to sync with ($BATON_FILE) (default "sync.c1z")

@@ -9,7 +9,29 @@ var (
 	// ConfigurationFields defines the external configuration required for the
 	// connector to run. Note: these fields can be marked as optional or
 	// required.
-	ConfigurationFields = []field.SchemaField{}
+	ConfigurationFields = []field.SchemaField{
+		field.StringField(
+			"base-url",
+			field.WithDescription("The Beeline base URL."),
+			field.WithRequired(true),
+			field.WithDefaultValue("https://client.beeline.com"),
+		),
+		field.StringField(
+			"beeline-client-site-id",
+			field.WithDescription("The Beeline client site ID."),
+			field.WithRequired(true),
+		),
+		field.StringField(
+			"beeline-client-id",
+			field.WithDescription("The OAuth2 client ID for Beeline API access."),
+			field.WithRequired(true),
+		),
+		field.StringField(
+			"beeline-client-secret",
+			field.WithDescription("The OAuth2 client secret for Beeline API access."),
+			field.WithRequired(true),
+		),
+	}
 
 	// FieldRelationships defines relationships between the fields listed in
 	// ConfigurationFields that can be automatically validated. For example, a

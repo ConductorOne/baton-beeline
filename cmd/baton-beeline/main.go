@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/conductorone/baton-beeline/pkg/connector"
 	"github.com/conductorone/baton-sdk/pkg/config"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/field"
 	"github.com/conductorone/baton-sdk/pkg/types"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/spf13/viper"
-	"github.com/conductorone/baton-beeline/pkg/connector"
 	"go.uber.org/zap"
 )
 
@@ -48,7 +48,13 @@ func getConnector(ctx context.Context, v *viper.Viper) (types.ConnectorServer, e
 		return nil, err
 	}
 
-	cb, err := connector.New(ctx)
+	// Get configurations values
+	baseURL := v.GetString("base-url")
+	beelineClientID := v.GetString("beeline-client-id")
+	beelineClientSecret := v.GetString("beeline-client-secret")
+	beelineClientSiteID := v.GetString("beeline-client-site-id")
+
+	cb, err := connector.New(ctx, baseURL, beelineClientID, beelineClientSecret, beelineClientSiteID)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err

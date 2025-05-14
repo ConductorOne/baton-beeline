@@ -17,7 +17,7 @@ jobs:
         uses: golangci/golangci-lint-action@v5
         with:
           version: latest
-          args: --timeout=3m
+          args: --timeout=3m --out-format=colored-line-number
   go-test:
     strategy:
       matrix:
