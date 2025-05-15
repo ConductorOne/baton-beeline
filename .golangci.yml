@@ -86,6 +86,7 @@ linters:
     - unconvert # Remove unnecessary type conversions
     - usestdlibvars # detect the possibility to use variables/constants from the Go standard library
     - whitespace # Tool for detection of leading and trailing whitespace
+    - usetesting # Reports uses of functions with replacement inside the testing package.
 issues:
   max-same-issues: 50
   exclude-rules:

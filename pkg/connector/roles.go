@@ -110,7 +110,6 @@ func (o *roleBuilder) Grant(
 	}
 
 	outputAnnotations := annotations.New()
-	// Add the user to the workspace directly without requiring confirmation
 	rateLimitData, err := o.service.AssignRoleToUser(
 		ctx,
 		entitlement.Resource.Id.Resource,
@@ -120,7 +119,7 @@ func (o *roleBuilder) Grant(
 
 	if err != nil {
 		// We are not checking if the grant is already exists because the API DOC does not provide specific information.
-		return outputAnnotations, fmt.Errorf("baton-beeline: failed to add user to workspace: %w", err)
+		return outputAnnotations, fmt.Errorf("baton-beeline: failed to assign role to user: %w", err)
 	}
 
 	return outputAnnotations, nil
@@ -155,7 +154,7 @@ func (o *roleBuilder) Revoke(
 
 	if err != nil {
 		// We are not checking if the grant was already revoked because the API DOC does not provide specific information.
-		return outputAnnotations, fmt.Errorf("baton-beeline: failed to remove user from workspace: %w", err)
+		return outputAnnotations, fmt.Errorf("baton-beeline: failed to revoke role from user: %w", err)
 	}
 
 	return outputAnnotations, nil

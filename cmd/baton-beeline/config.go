@@ -13,7 +13,7 @@ var (
 		field.StringField(
 			"base-url",
 			field.WithDescription("The Beeline base URL."),
-			field.WithRequired(true),
+			field.WithRequired(false),
 			field.WithDefaultValue("https://client.beeline.com"),
 		),
 		field.StringField(
