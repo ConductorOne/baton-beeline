@@ -50,14 +50,26 @@ jobs:
     env:
       BATON_LOG_LEVEL: debug
       # Add any environment variables needed to run baton-beeline
-      # BATON_BASE_URL: 'http://localhost:8080'
-      # BATON_ACCESS_TOKEN: 'secret_token'
+      # Base URL - Using default production URL
+      CONNECTOR_BASE_URL: http://localhost:8080
+      CONNECTOR_AUTH_SERVER_URL: http://localhost:8080/oauth/token
+      # Client Site Configuration
+      CONNECTOR_CLIENT_SITE_ID: test-site
+      # OAuth2 Credentials
+      CONNECTOR_CLIENT_ID: test-client
+      CONNECTOR_CLIENT_SECRET: test-secret
+      CONNECTOR_FLAGS: >-
+        --base-url ${CONNECTOR_BASE_URL}
+        --beeline-client-site-id ${CONNECTOR_CLIENT_SITE_ID}
+        --auth-server-url ${CONNECTOR_AUTH_SERVER_URL}
+        --beeline-client-id ${CONNECTOR_CLIENT_ID}
+        --beeline-client-secret ${CONNECTOR_CLIENT_SECRET}
       # The following parameters are passed to grant/revoke commands
       # Change these to the correct IDs for your test data
-      CONNECTOR_GRANT: 'grant:entitlement:group:1234:member:user:9876'
-      CONNECTOR_ENTITLEMENT: 'entitlement:group:1234:member'
-      CONNECTOR_PRINCIPAL: 'user:9876'
+      CONNECTOR_ENTITLEMENT: 'role:admin:assigned'
+      CONNECTOR_PRINCIPAL: 'b1a8f5e2-3c4d-4e6f-8a9b-1c2d3e4f5a6b'
       CONNECTOR_PRINCIPAL_TYPE: 'user'
+      CONNECTOR_GRANT: 'role:admin:assigned:user:b1a8f5e2-3c4d-4e6f-8a9b-1c2d3e4f5a6b'
     steps:
       - name: Install Go
         uses: actions/setup-go@v5
@@ -65,10 +77,36 @@ jobs:
           go-version: 1.24.x
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Build test server
+        run: go build -o test-server ./cmd/test-server
+      - name: Start test server
+        run: ./test-server &
+      - name: Wait for test server to start
+        run: sleep 5
+
+      - name: Build baton-beeline
+        run: go build ./cmd/baton-beeline
+      - name: Run baton-beeline
+        run: ./baton-beeline ${{ env.CONNECTOR_FLAGS }}
+
       - name: Install baton
         run: ./scripts/get-baton.sh && mv baton /usr/local/bin
+      
+      - name: Check for grant before revoking
+        run: baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status '(.grants // []) | [.[].grant.principal.id.resource] | any(. == "'${{ env.CONNECTOR_PRINCIPAL }}'")'
 
-# ############################################################################################
-# We need to skip the CI test for now because we don't have a environment to run the tests on.
-# ############################################################################################
+      - name: Revoke grants
+        run: ./baton-beeline ${{ env.CONNECTOR_FLAGS }} --revoke-grant="${{ env.CONNECTOR_GRANT }}"
+
+      - name: Check grant was revoked
+        run: ./baton-beeline ${{ env.CONNECTOR_FLAGS }} && baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq -r '(.grants | length == 0) or ([ .grants[].grant.principal.id.resource ] | all(. != "'${{ env.CONNECTOR_PRINCIPAL }}'"))'
+
+      - name: Grant entitlement
+        run: ./baton-beeline ${{ env.CONNECTOR_FLAGS }} --grant-entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --grant-principal="${{ env.CONNECTOR_PRINCIPAL }}" --grant-principal-type="${{ env.CONNECTOR_PRINCIPAL_TYPE }}"
+
+      - name: Check grant was re-granted
+        run: ./baton-beeline ${{ env.CONNECTOR_FLAGS }} &&
+          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status '(.grants // []) | [.[].grant.principal.id.resource] | any(. == "'${{ env.CONNECTOR_PRINCIPAL }}'")'
+
 

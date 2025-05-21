@@ -31,6 +31,12 @@ var (
 			field.WithDescription("The OAuth2 client secret for Beeline API access."),
 			field.WithRequired(true),
 		),
+		field.StringField(
+			"auth-server-url",
+			field.WithDescription("The Beeline auth server URL."),
+			field.WithRequired(false),
+			field.WithDefaultValue("https://integrations.auth.beeline.com/oauth/token"),
+		),
 	}
 
 	// FieldRelationships defines relationships between the fields listed in

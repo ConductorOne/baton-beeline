@@ -60,7 +60,7 @@ func (c *Client) post(
 		url,
 		target,
 		uhttp.WithBearerToken(token.AccessToken),
-		uhttp.WithFormBody(toValues(payload)),
+		uhttp.WithJSONBody(payload),
 	)
 }
 
@@ -84,6 +84,7 @@ func (c *Client) doRequest(
 	options = append(
 		options,
 		uhttp.WithAcceptJSONHeader(),
+		uhttp.WithContentTypeJSONHeader(),
 	)
 
 	request, err := c.httpClient.NewRequest(
@@ -93,8 +94,9 @@ func (c *Client) doRequest(
 		options...,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
+
 	var ratelimitData v2.RateLimitDescription
 	response, err := c.httpClient.Do(
 		request,
@@ -102,17 +104,36 @@ func (c *Client) doRequest(
 		uhttp.WithErrorResponse(&ErrorResponse{}),
 	)
 	if err != nil {
-		return &ratelimitData, err
+		return &ratelimitData, fmt.Errorf("request failed: %w", err)
 	}
 	defer response.Body.Close()
 
 	bodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
-		return &ratelimitData, err
+		return &ratelimitData, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Log response details for debugging
+	logger.Debug("received response",
+		zap.Int("status_code", response.StatusCode),
+		zap.String("content_type", response.Header.Get("Content-Type")),
+		zap.String("body", string(bodyBytes)),
+	)
+
+	if response.StatusCode != http.StatusOK {
+		return &ratelimitData, fmt.Errorf("request failed with status %d: %s", response.StatusCode, string(bodyBytes))
+	}
+
+	if len(bodyBytes) == 0 {
+		// If target is nil, we expect no response body
+		if target == nil {
+			return &ratelimitData, nil
+		}
+		return nil, fmt.Errorf("server returned empty response")
 	}
 
 	if err := json.Unmarshal(bodyBytes, &target); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &ratelimitData, nil

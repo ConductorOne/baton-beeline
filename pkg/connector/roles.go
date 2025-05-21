@@ -32,13 +32,13 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	}
 
 	outputAnnotations := annotations.New()
-	roles, nextPageNumber, rateLimit, err := o.service.GetRoles(ctx, pageNumber)
+	roles, nextPageNumber, rateLimit, err := o.service.ListRoles(ctx, pageNumber)
 	outputAnnotations.WithRateLimiting(rateLimit)
 	if err != nil {
 		return nil, "", outputAnnotations, fmt.Errorf("failed to list roles: %w", err)
 	}
 
-	resources := make([]*v2.Resource, len(roles))
+	resources := make([]*v2.Resource, 0, len(roles))
 	for _, role := range roles {
 		roleCopy := role
 		roleResource, err := roleResource(&roleCopy)
@@ -78,7 +78,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 		return nil, "", outputAnnotations, fmt.Errorf("failed to list role assignments: %w", err)
 	}
 
-	rv := make([]*v2.Grant, len(roleAssignments))
+	rv := make([]*v2.Grant, 0, len(roleAssignments))
 	for _, roleAssignment := range roleAssignments {
 		userResource := &v2.Resource{
 			Id: &v2.ResourceId{
@@ -140,7 +140,7 @@ func (o *roleBuilder) Revoke(
 			zap.String("principal_type", grant.Principal.Id.ResourceType),
 			zap.String("principal_id", grant.Principal.Id.Resource),
 		)
-		return nil, fmt.Errorf("baton-beeline: only users can be assigned to a role")
+		return nil, fmt.Errorf("baton-beeline: only users can be revoked from a role")
 	}
 
 	outputAnnotations := annotations.New()

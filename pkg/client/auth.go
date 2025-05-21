@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -12,14 +13,12 @@ import (
 	"golang.org/x/oauth2"
 )
 
-//nolint:gosec // This constant is the token endpoint URL, not a secret token.
-const tokenURL = "https://integrations.auth.beeline.com/oauth/token"
-
 type tokenSource struct {
-	clientID     string
-	clientSecret string
-	baseAPIURL   *url.URL
-	httpClient   *http.Client
+	authServerURL string
+	clientID      string
+	clientSecret  string
+	baseAPIURL    *url.URL
+	httpClient    *http.Client
 }
 
 type token struct {
@@ -29,48 +28,69 @@ type token struct {
 }
 
 func (ts *tokenSource) Token() (*oauth2.Token, error) {
+	if ts.clientID == "" || ts.clientSecret == "" || ts.baseAPIURL == nil {
+		return nil, fmt.Errorf("invalid token source configuration: clientID, clientSecret, and baseAPIURL are required")
+	}
+
 	payload := url.Values{}
 	payload.Set("client_id", ts.clientID)
 	payload.Set("client_secret", ts.clientSecret)
-	payload.Set("audience", ts.baseAPIURL.String()) // audience = the base URL for the API you are using.
 	payload.Set("grant_type", "client_credentials")
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, tokenURL, bytes.NewBufferString(payload.Encode()))
+	baseURL := *ts.baseAPIURL
+	payload.Set("audience", baseURL.String())
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, ts.authServerURL, bytes.NewBufferString(payload.Encode()))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating token request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
 
 	resp, err := ts.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error making token request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading token response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("token request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
 	token := &token{}
 	err = json.Unmarshal(body, token)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshaling token response: %w", err)
+	}
+
+	if token.AccessToken == "" {
+		return nil, fmt.Errorf("received empty access token")
+	}
+
+	if token.ExpiresIn <= 0 {
+		// Set a default expiration of 1 hour if not provided
+		token.ExpiresIn = 3600
 	}
 
 	return &oauth2.Token{
 		AccessToken: token.AccessToken,
-		Expiry:      time.Unix(int64(token.ExpiresIn), 0),
+		Expiry:      time.Now().Add(time.Duration(token.ExpiresIn) * time.Second),
 		TokenType:   token.TokenType,
 	}, nil
 }
 
-func newTokenSource(clientID, clientSecret string, baseAPIURL *url.URL, httpClient *http.Client) (oauth2.TokenSource, error) {
+func newTokenSource(authServerURL, clientID, clientSecret string, baseAPIURL *url.URL, httpClient *http.Client) (oauth2.TokenSource, error) {
 	return oauth2.ReuseTokenSource(nil, &tokenSource{
-		clientID:     clientID,
-		clientSecret: clientSecret,
-		baseAPIURL:   baseAPIURL,
-		httpClient:   httpClient,
+		authServerURL: authServerURL,
+		clientID:      clientID,
+		clientSecret:  clientSecret,
+		baseAPIURL:    baseAPIURL,
+		httpClient:    httpClient,
 	}), nil
 }

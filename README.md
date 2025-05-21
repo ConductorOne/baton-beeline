@@ -16,6 +16,7 @@ This connector requires the following configuration:
 - `beeline-client-site-id`: The Beeline client site ID
 - `beeline-client-id`: The OAuth2 client ID for Beeline API access
 - `beeline-client-secret`: The OAuth2 client secret for Beeline API access
+- `auth-server-url`: The Beeline auth server URL (default: "https://integrations.auth.beeline.com/oauth/token")
 
 You can provide these values as environment variables:
 
@@ -24,6 +25,7 @@ export BATON_BASE_URL=https://client.beeline.com
 export BATON_BEELINE_CLIENT_SITE_ID=your-site-id
 export BATON_BEELINE_CLIENT_ID=your-client-id
 export BATON_BEELINE_CLIENT_SECRET=your-client-secret
+export BATON_AUTH_SERVER_URL=https://integrations.auth.beeline.com/oauth/token
 ```
 
 ## Installation Options
@@ -92,6 +94,7 @@ Available Commands:
 Flags:
       --base-url string              The Beeline base URL ($BATON_BASE_URL) (default "https://client.beeline.com")
       --beeline-client-site-id string The Beeline client site ID ($BATON_BEELINE_CLIENT_SITE_ID)
+      --auth-server-url string        The Beeline auth server URL ($BATON_AUTH_SERVER_URL) (default "https://integrations.auth.beeline.com/oauth/token")
       --beeline-client-id string     The OAuth2 client ID for Beeline API access ($BATON_BEELINE_CLIENT_ID)
       --beeline-client-secret string The OAuth2 client secret for Beeline API access ($BATON_BEELINE_CLIENT_SECRET)
       --client-id string             The client ID used to authenticate with ConductorOne ($BATON_CLIENT_ID)

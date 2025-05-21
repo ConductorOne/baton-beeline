@@ -29,7 +29,7 @@ type Client struct {
 }
 
 // NewClient creates a new BeelineClient.
-func NewClient(ctx context.Context, baseURL, clientSiteID, clientID, clientSecret string) (*Client, error) {
+func NewClient(ctx context.Context, baseURL, authServerURL, clientSiteID, clientID, clientSecret string) (*Client, error) {
 	if clientSiteID == "" || clientID == "" || clientSecret == "" {
 		return nil, errors.New("clientSiteID, clientID, and clientSecret are required")
 	}
@@ -39,19 +39,19 @@ func NewClient(ctx context.Context, baseURL, clientSiteID, clientID, clientSecre
 		Timeout: 60 * time.Second, // Increased from 30s to 60s for longer operations
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Error creating http client: %w", err)
+		return nil, fmt.Errorf("error creating http client: %w", err)
 	}
 
 	// Create base API URL
 	clientAPIURL, err := url.Parse(fmt.Sprintf(apiURLTemplate, baseURL, clientSiteID))
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing base API URL: %w", err)
+		return nil, fmt.Errorf("error parsing base API URL: %w", err)
 	}
 
 	// Create token source
-	tokenSource, err := newTokenSource(clientID, clientSecret, clientAPIURL, httpClient.HttpClient)
+	tokenSource, err := newTokenSource(authServerURL, clientID, clientSecret, clientAPIURL, httpClient.HttpClient)
 	if err != nil {
-		return nil, fmt.Errorf("Error creating token source: %w", err)
+		return nil, fmt.Errorf("error creating token source: %w", err)
 	}
 
 	client := &Client{
@@ -81,12 +81,12 @@ func (c *Client) listOrganizations(ctx context.Context, pageNumber uint) (
 	pageSize := uint(ResourcesPageSize)
 	url, err := c.constructURL(path, nil, nil, &pageNumber, &pageSize)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("Error generating user list URL: %w", err)
+		return nil, nil, nil, fmt.Errorf("error generating user list URL: %w", err)
 	}
 
 	rateLimit, err := c.get(ctx, url, &response)
 	if err != nil {
-		return nil, nil, rateLimit, fmt.Errorf("Error executing request: %w", err)
+		return nil, nil, rateLimit, fmt.Errorf("error executing request: %w", err)
 	}
 
 	nextPageNumber := GetNextPageNumber(len(response.Value), pageNumber)
@@ -112,12 +112,12 @@ func (c *Client) listUsers(ctx context.Context, pageNumber uint) (
 	pageSize := uint(ResourcesPageSize)
 	url, err := c.constructURL(path, nil, nil, &pageNumber, &pageSize)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("Error generating user list URL: %w", err)
+		return nil, nil, nil, fmt.Errorf("error generating user list URL: %w", err)
 	}
 
 	rateLimit, err := c.get(ctx, url, &response)
 	if err != nil {
-		return nil, nil, rateLimit, fmt.Errorf("Error executing request: %w", err)
+		return nil, nil, rateLimit, fmt.Errorf("error executing request: %w", err)
 	}
 
 	nextPageNumber := GetNextPageNumber(len(response.Value), pageNumber)
@@ -143,12 +143,12 @@ func (c *Client) listRoles(ctx context.Context, pageNumber uint) (
 	pageSize := uint(ResourcesPageSize)
 	url, err := c.constructURL(path, nil, nil, &pageNumber, &pageSize)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("Error generating user list URL: %w", err)
+		return nil, nil, nil, fmt.Errorf("error generating user list URL: %w", err)
 	}
 
 	rateLimit, err := c.get(ctx, url, &response)
 	if err != nil {
-		return nil, nil, rateLimit, fmt.Errorf("Error executing request: %w", err)
+		return nil, nil, rateLimit, fmt.Errorf("error executing request: %w", err)
 	}
 
 	nextPageNumber := GetNextPageNumber(len(response.Value), pageNumber)
@@ -164,14 +164,13 @@ func (c *Client) listRoleAssignments(ctx context.Context, roleCode string, pageN
 ) {
 	// Doc: https://developers.beeline.com/core_2023-02-28#tag/Identity-and-Access-Management/operation/get-iam-users-by-role
 	// Required scopes: read:iam write:iam
-	path := "/roles/%s/users" // %s is the roleCode
+	path := "/roles/{roleCode}/users"
+	pathParameters := map[string]string{"roleCode": roleCode}
 
 	var response struct {
 		MaxItems int      `json:"maxItems"`
 		Value    []string `json:"value"` // list of userIds
 	}
-
-	pathParameters := map[string]string{"roleCode": roleCode}
 
 	pageSize := uint(ResourcesPageSize)
 	url, err := c.constructURL(path, pathParameters, nil, &pageNumber, &pageSize)
@@ -195,7 +194,7 @@ func (c *Client) assignRoleToUser(ctx context.Context, roleCode string, userID s
 ) {
 	// Doc: https://developers.beeline.com/core_2023-02-28#tag/Identity-and-Access-Management/operation/post-iam-add-user
 	// Required scopes: write:iam
-	path := "/roles/%s/users/add" // %s is the roleCode
+	path := "/roles/{roleCode}/users/add"
 	pathParameters := map[string]string{"roleCode": roleCode}
 
 	url, err := c.constructURL(path, pathParameters, nil, nil, nil)
@@ -203,11 +202,9 @@ func (c *Client) assignRoleToUser(ctx context.Context, roleCode string, userID s
 		return nil, fmt.Errorf("error generating user list URL: %w", err)
 	}
 
-	payload := map[string]interface{}{"userIds": userID}
+	payload := map[string]interface{}{"value": []string{userID}}
 	// If status code is 200, the request was successful and the target will be empty.
-	response := map[string]interface{}{}
-
-	rateLimit, err := c.post(ctx, url, &response, payload)
+	rateLimit, err := c.post(ctx, url, nil, payload)
 	if err != nil {
 		return nil, fmt.Errorf("error executing request: %w", err)
 	}
@@ -221,7 +218,7 @@ func (c *Client) removeRoleFromUser(ctx context.Context, roleCode string, userID
 ) {
 	// Doc: https://developers.beeline.com/core_2023-02-28#tag/Identity-and-Access-Management/operation/post-iam-remove-user
 	// Required scopes: write:iam
-	path := "/roles/%s/users/remove" // %s is the roleCode
+	path := "/roles/{roleCode}/users/remove"
 	pathParameters := map[string]string{"roleCode": roleCode}
 
 	url, err := c.constructURL(path, pathParameters, nil, nil, nil)
@@ -229,11 +226,9 @@ func (c *Client) removeRoleFromUser(ctx context.Context, roleCode string, userID
 		return nil, fmt.Errorf("error generating user list URL: %w", err)
 	}
 
-	payload := map[string]interface{}{"userIds": userID}
+	payload := map[string]interface{}{"value": []string{userID}}
 	// If status code is 200, the request was successful and the target will be empty.
-	response := map[string]interface{}{}
-
-	rateLimit, err := c.post(ctx, url, &response, payload)
+	rateLimit, err := c.post(ctx, url, nil, payload)
 	if err != nil {
 		return nil, fmt.Errorf("error executing request: %w", err)
 	}

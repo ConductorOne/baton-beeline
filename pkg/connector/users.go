@@ -22,20 +22,20 @@ func (o *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 
 // List returns all the users from the database as resource objects.
 // Users include a UserTrait because they are the 'shape' of a standard user.
-func (o *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (o *userBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	pageNumber, err := parsePageToken(pToken.Token)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("error parsing page token: %w", err)
 	}
 
 	outputAnnotations := annotations.New()
-	users, nextPageNumber, rateLimit, err := o.service.GetUsers(ctx, pageNumber)
+	users, nextPageNumber, rateLimit, err := o.service.ListUsers(ctx, pageNumber)
 	outputAnnotations.WithRateLimiting(rateLimit)
 	if err != nil {
 		return nil, "", outputAnnotations, fmt.Errorf("failed to list users: %w", err)
 	}
 
-	resources := make([]*v2.Resource, len(users))
+	resources := make([]*v2.Resource, 0, len(users))
 	for _, user := range users {
 		userCopy := user
 		userResource, err := userResource(&userCopy)
@@ -67,7 +67,7 @@ func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 	rv = append(rv, grant.NewGrant(
 		organizationResource,
 		organizationMemberEntitlement,
-		resource.ParentResourceId,
+		resource,
 	))
 
 	return rv, "", nil, nil
@@ -82,26 +82,38 @@ func newUserBuilder(cclient *client.Client) *userBuilder {
 // userResource creates a resource object for a userResponse.
 func userResource(user *client.UserResponse) (*v2.Resource, error) {
 	fullName := user.FirstName + " " + user.LastName
+
+	// Create profile map with non-pointer fields
 	profile := map[string]interface{}{
 		"username":      user.UserName,
 		"name":          fullName,
-		"email":         user.Email,
-		"title":         user.Title,
-		"ou_code":       user.OUCode, // The organizational unit within organization to which the user belongs
+		"ou_code":       user.OUCode, // The organizational unit within organization to which the user belongs.
 		"location_code": user.LocationCode,
 		"language_code": user.LanguageCode,
+	}
+
+	// Add pointer fields only if they're not nil
+	if user.Email != nil {
+		profile["email"] = *user.Email
+	}
+	if user.Title != nil {
+		profile["title"] = *user.Title
 	}
 
 	userTraitOptions := []rs.UserTraitOption{
 		rs.WithUserProfile(profile),
 		rs.WithStatus(v2.UserTrait_Status_STATUS_ENABLED),
-		rs.WithEmail(*user.Email, true),
+	}
+
+	// Add email trait only if email exists
+	if user.Email != nil {
+		userTraitOptions = append(userTraitOptions, rs.WithEmail(*user.Email, true))
 	}
 
 	resource, err := rs.NewUserResource(
 		fullName,
 		userResourceType,
-		&user.UserID,
+		user.UserID,
 		userTraitOptions,
 		rs.WithParentResourceID(&v2.ResourceId{
 			ResourceType: organizationResourceType.Id,

@@ -51,10 +51,11 @@ func getConnector(ctx context.Context, v *viper.Viper) (types.ConnectorServer, e
 	// Get configurations values
 	baseURL := v.GetString("base-url")
 	beelineClientID := v.GetString("beeline-client-id")
+	authServerURL := v.GetString("auth-server-url")
 	beelineClientSecret := v.GetString("beeline-client-secret")
 	beelineClientSiteID := v.GetString("beeline-client-site-id")
 
-	cb, err := connector.New(ctx, baseURL, beelineClientID, beelineClientSecret, beelineClientSiteID)
+	cb, err := connector.New(ctx, baseURL, authServerURL, beelineClientID, beelineClientSecret, beelineClientSiteID)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err
@@ -64,5 +65,6 @@ func getConnector(ctx context.Context, v *viper.Viper) (types.ConnectorServer, e
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err
 	}
+
 	return connector, nil
 }

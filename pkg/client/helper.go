@@ -3,48 +3,43 @@ package client
 import (
 	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
 )
 
-func (c *Client) constructURL(
-	path string,
-	pathParameters map[string]string,
-	queryParams map[string]string,
-	pageNumber *uint,
-	pageSize *uint,
-) (*url.URL, error) {
-	// Add path parameters
-	for _, param := range pathParameters {
-		path = strings.Replace(path, "%s", param, 1)
-	}
+// constructURL builds the full URL for an API request.
+func (c *Client) constructURL(path string, pathParams map[string]string, queryParams map[string]string, pageNumber, pageSize *uint) (*url.URL, error) {
+	// Start with the base URL
+	u := *c.baseAPIURL
 
-	// Parse the path
-	parsed, err := url.Parse(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse request path '%s': %w", path, err)
+	// Add the path
+	if path != "" {
+		// Replace path parameters
+		for k, v := range pathParams {
+			path = strings.ReplaceAll(path, "{"+k+"}", url.PathEscape(v))
+		}
+		u.Path += path
 	}
-
-	// Resolve the base URL
-	url := c.baseAPIURL.ResolveReference(parsed)
 
 	// Add query parameters
-	q := url.Query()
-	for key, value := range queryParams {
-		q.Set(key, value)
-	}
-	if pageNumber != nil {
-		// Safely convert to string without potential integer overflow
-		skip := fmt.Sprintf("%d", (*pageNumber)*(*pageSize))
-		size := fmt.Sprintf("%d", *pageSize)
-
-		q.Set("skip", skip) // skip a number of records (start) (>= 0)
-		q.Set("top", size)  // number of records to return (limit) ([ 0 .. 1000 ])
-	}
+	q := u.Query()
 	q.Set("api-version", apiVersion)
-	url.RawQuery = q.Encode()
 
-	return url, nil
+	// Add pagination parameters if provided
+	if pageNumber != nil {
+		q.Set("skip", fmt.Sprintf("%d", *pageNumber*(*pageSize)))
+	}
+	if pageSize != nil {
+		q.Set("top", fmt.Sprintf("%d", *pageSize))
+	}
+
+	// Add any additional query parameters
+	for k, v := range queryParams {
+		q.Set(k, v)
+	}
+
+	u.RawQuery = q.Encode()
+
+	return &u, nil
 }
 
 // GetNextPageNumber calculates the next page number for pagination
@@ -57,22 +52,4 @@ func GetNextPageNumber(resultCount int, pageNumber uint) *uint {
 
 	nextPage := pageNumber + 1
 	return &nextPage
-}
-
-// toValues converts a map of query parameters to a string.
-func toValues(queryParameters map[string]interface{}) string {
-	params := url.Values{}
-	for key, valueAny := range queryParameters {
-		switch value := valueAny.(type) {
-		case string:
-			params.Add(key, value)
-		case int:
-			params.Add(key, strconv.Itoa(value))
-		case bool:
-			params.Add(key, strconv.FormatBool(value))
-		default:
-			continue
-		}
-	}
-	return params.Encode()
 }

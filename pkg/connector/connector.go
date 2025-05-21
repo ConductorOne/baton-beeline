@@ -8,8 +8,10 @@ import (
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 
 	"github.com/conductorone/baton-beeline/pkg/client"
+	"go.uber.org/zap"
 )
 
 type Connector struct {
@@ -19,8 +21,8 @@ type Connector struct {
 // ResourceSyncers returns a ResourceSyncer for each resource type that should be synced from the upstream service.
 func (d *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncer {
 	return []connectorbuilder.ResourceSyncer{
-		newUserBuilder(d.client),
 		newOrganizationBuilder(d.client),
+		newUserBuilder(d.client),
 		newRoleBuilder(d.client),
 	}
 }
@@ -42,12 +44,22 @@ func (d *Connector) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error)
 // Validate is called to ensure that the connector is properly configured. It should exercise any API credentials
 // to be sure that they are valid.
 func (d *Connector) Validate(ctx context.Context) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+
+	userService := client.NewClientService(d.client)
+
+	_, _, _, err := userService.ListUsers(ctx, 0)
+	if err != nil {
+		l.Error("error getting user", zap.Error(err))
+		return nil, err
+	}
+
 	return nil, nil
 }
 
 // New returns a new instance of the connector.
-func New(ctx context.Context, baseURL, beelineClientID, beelineClientSecret, beelineClientSiteID string) (*Connector, error) {
-	client, err := client.NewClient(ctx, baseURL, beelineClientID, beelineClientSecret, beelineClientSiteID)
+func New(ctx context.Context, baseURL, authServerURL, beelineClientID, beelineClientSecret, beelineClientSiteID string) (*Connector, error) {
+	client, err := client.NewClient(ctx, baseURL, authServerURL, beelineClientID, beelineClientSecret, beelineClientSiteID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create beeline client: %w", err)
 	}

@@ -29,13 +29,13 @@ func (o *organizationBuilder) List(ctx context.Context, parentResourceID *v2.Res
 	}
 
 	outputAnnotations := annotations.New()
-	organizations, nextPageNumber, rateLimit, err := o.service.GetOrganizations(ctx, pageNumber)
+	organizations, nextPageNumber, rateLimit, err := o.service.ListOrganizations(ctx, pageNumber)
 	outputAnnotations.WithRateLimiting(rateLimit)
 	if err != nil {
 		return nil, "", outputAnnotations, fmt.Errorf("failed to list organizations: %w", err)
 	}
 
-	resources := make([]*v2.Resource, len(organizations))
+	resources := make([]*v2.Resource, 0, len(organizations))
 	for _, organization := range organizations {
 		organizationCopy := organization
 		organizationResource, err := organizationResource(&organizationCopy)
@@ -88,10 +88,22 @@ func organizationResource(organization *client.OrganizationResponse) (*v2.Resour
 		description = *organization.Description
 	}
 
-	resource, err := rs.NewResource(
+	// Create profile map for the group trait
+	profile := map[string]interface{}{
+		"organization_code": organization.OrganizationCode,
+		"display_name":      organization.DisplayName,
+		"description":       description,
+	}
+
+	groupTraitOptions := []rs.GroupTraitOption{
+		rs.WithGroupProfile(profile),
+	}
+
+	resource, err := rs.NewGroupResource(
 		organization.DisplayName,
 		organizationResourceType,
 		organization.OrganizationCode,
+		groupTraitOptions,
 		rs.WithDescription(description),
 	)
 	if err != nil {

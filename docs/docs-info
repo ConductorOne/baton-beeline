@@ -8,13 +8,16 @@ While developing the connector, please fill out this form. This information is n
    - Roles
 
 2. Can the connector provision any resources? If so, which ones? 
-   - Yes, the connector can provision role assignments to users (adding and removing users from roles).
+   - Yes, this connector supports role provisioning operations, specifically:
+     * Granting role access to users
+     * Revoking role access from users
 
 ## Connector credentials 
 
 1. What credentials or information are needed to set up the connector? (For example, API key, client ID and secret, domain, etc.)
    - Base URL (default: https://client.beeline.com)
    - Beeline Client Site ID
+   - Auth Server URL (default: https://auth.beeline.com/oauth/token)
    - OAuth2 Client ID
    - OAuth2 Client Secret
 
@@ -23,6 +26,7 @@ While developing the connector, please fill out this form. This information is n
    * How does a user create or look up that credential or info?
      - Base URL: This is typically https://client.beeline.com but may vary depending on the environment.
      - Beeline Client Site ID: This is provided by Beeline for your specific organization's site.
+     - Auth Server URL: This is the OAuth2 token endpoint for authentication. The default value https://integrations.auth.beeline.com/oauth/token should be used for production environments. This URL can be overridden for local testing purposes, but in most cases, the default value is correct.
      - OAuth2 Client ID and Secret: These need to be requested through Beeline's Customer Operations Manager (COM). Users need to contact their COM to create a change request ticket to scope their needs. Once the change request has been scoped and project assigned, Beeline's Integrations team will create and securely transmit these security credentials.
 
    * Does the credential need any specific scopes or permissions? If so, list them here.
