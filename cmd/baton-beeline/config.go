@@ -6,37 +6,43 @@ import (
 )
 
 var (
+	baseURLField = field.StringField(
+		"base-url",
+		field.WithDescription("The Beeline base URL."),
+		field.WithRequired(false),
+		field.WithDefaultValue("https://client.beeline.com"),
+	)
+	beelineClientSiteIDField = field.StringField(
+		"beeline-client-site-id",
+		field.WithDescription("The Beeline client site ID."),
+		field.WithRequired(true),
+	)
+	beelineClientIDField = field.StringField(
+		"beeline-client-id",
+		field.WithDescription("The OAuth2 client ID for Beeline API access."),
+		field.WithRequired(true),
+	)
+	beelineClientSecretField = field.StringField(
+		"beeline-client-secret",
+		field.WithDescription("The OAuth2 client secret for Beeline API access."),
+		field.WithRequired(true),
+	)
+	authServerURLField = field.StringField(
+		"auth-server-url",
+		field.WithDescription("The Beeline auth server URL."),
+		field.WithRequired(false),
+		field.WithDefaultValue("https://integrations.auth.beeline.com/oauth/token"),
+	)
+
 	// ConfigurationFields defines the external configuration required for the
 	// connector to run. Note: these fields can be marked as optional or
 	// required.
 	ConfigurationFields = []field.SchemaField{
-		field.StringField(
-			"base-url",
-			field.WithDescription("The Beeline base URL."),
-			field.WithRequired(false),
-			field.WithDefaultValue("https://client.beeline.com"),
-		),
-		field.StringField(
-			"beeline-client-site-id",
-			field.WithDescription("The Beeline client site ID."),
-			field.WithRequired(true),
-		),
-		field.StringField(
-			"beeline-client-id",
-			field.WithDescription("The OAuth2 client ID for Beeline API access."),
-			field.WithRequired(true),
-		),
-		field.StringField(
-			"beeline-client-secret",
-			field.WithDescription("The OAuth2 client secret for Beeline API access."),
-			field.WithRequired(true),
-		),
-		field.StringField(
-			"auth-server-url",
-			field.WithDescription("The Beeline auth server URL."),
-			field.WithRequired(false),
-			field.WithDefaultValue("https://integrations.auth.beeline.com/oauth/token"),
-		),
+		baseURLField,
+		beelineClientSiteIDField,
+		beelineClientIDField,
+		beelineClientSecretField,
+		authServerURLField,
 	}
 
 	// FieldRelationships defines relationships between the fields listed in

@@ -49,11 +49,11 @@ func getConnector(ctx context.Context, v *viper.Viper) (types.ConnectorServer, e
 	}
 
 	// Get configurations values
-	baseURL := v.GetString("base-url")
-	beelineClientID := v.GetString("beeline-client-id")
-	authServerURL := v.GetString("auth-server-url")
-	beelineClientSecret := v.GetString("beeline-client-secret")
-	beelineClientSiteID := v.GetString("beeline-client-site-id")
+	baseURL := v.GetString(baseURLField.FieldName)
+	beelineClientID := v.GetString(beelineClientIDField.FieldName)
+	authServerURL := v.GetString(authServerURLField.FieldName)
+	beelineClientSecret := v.GetString(beelineClientSecretField.FieldName)
+	beelineClientSiteID := v.GetString(beelineClientSiteIDField.FieldName)
 
 	cb, err := connector.New(ctx, baseURL, authServerURL, beelineClientID, beelineClientSecret, beelineClientSiteID)
 	if err != nil {
