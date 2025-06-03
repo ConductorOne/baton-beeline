@@ -9,6 +9,7 @@ import (
 	"github.com/conductorone/baton-beeline/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
+	"github.com/conductorone/baton-sdk/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -37,7 +38,7 @@ func TestRolesList(t *testing.T) {
 			ctx context.Context,
 			pageNumber uint,
 		) (
-			[]client.RoleResponse,
+			[]*client.RoleResponse,
 			*uint,
 			*v2.RateLimitDescription,
 			error,
@@ -74,7 +75,7 @@ func TestRolesList(t *testing.T) {
 			ctx context.Context,
 			pageNumber uint,
 		) (
-			[]client.RoleResponse,
+			[]*client.RoleResponse,
 			*uint,
 			*v2.RateLimitDescription,
 			error,
@@ -94,13 +95,13 @@ func TestRolesList(t *testing.T) {
 			ctx context.Context,
 			pageNumber uint,
 		) (
-			[]client.RoleResponse,
+			[]*client.RoleResponse,
 			*uint,
 			*v2.RateLimitDescription,
 			error,
 		) {
 			description := "Test Role"
-			roles := []client.RoleResponse{
+			roles := []*client.RoleResponse{
 				{
 					RoleCode:    "ROLE1",
 					DisplayName: "Role 1",
@@ -118,7 +119,7 @@ func TestRolesList(t *testing.T) {
 		require.NotEmpty(t, resources[0].Id)
 
 		require.NotNil(t, token)
-		AssertNoRatelimitAnnotations(t, annotations)
+		test.AssertNoRatelimitAnnotations(t, annotations)
 		require.Nil(t, err)
 	})
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"text/template"
 )
 
 // constructURL builds the full URL for an API request.
@@ -11,16 +12,27 @@ func (c *Client) constructURL(path string, pathParams map[string]string, queryPa
 	// Start with the base URL
 	u := *c.baseAPIURL
 
-	// Add the path
+	// Add the path parameters
 	if path != "" {
-		// Replace path parameters
-		for k, v := range pathParams {
-			path = strings.ReplaceAll(path, "{"+k+"}", url.PathEscape(v))
+		// Create a template for path parameter replacement
+		tmpl, err := template.New("path").Parse(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse path template: %w", err)
 		}
-		u.Path += path
+
+		// Create a buffer to hold the result
+		var buf strings.Builder
+
+		// Execute the template with path parameters
+		if err := tmpl.Execute(&buf, pathParams); err != nil {
+			return nil, fmt.Errorf("failed to execute path template: %w", err)
+		}
+
+		// Use the processed path
+		u.Path += buf.String()
 	}
 
-	// Add query parameters
+	// Add pagination query parameters
 	q := u.Query()
 	q.Set("api-version", apiVersion)
 
@@ -42,10 +54,10 @@ func (c *Client) constructURL(path string, pathParams map[string]string, queryPa
 	return &u, nil
 }
 
-// GetNextPageNumber calculates the next page number for pagination
+// getNextPageNumber calculates the next page number for pagination
 // based on the current results and page size.
 // Returns nil if there are no more pages.
-func GetNextPageNumber(resultCount int, pageNumber uint) *uint {
+func getNextPageNumber(resultCount int, pageNumber uint) *uint {
 	if resultCount < ResourcesPageSize {
 		return nil
 	}

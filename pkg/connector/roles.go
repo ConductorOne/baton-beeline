@@ -40,8 +40,7 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 
 	resources := make([]*v2.Resource, 0, len(roles))
 	for _, role := range roles {
-		roleCopy := role
-		roleResource, err := roleResource(&roleCopy)
+		roleResource, err := roleResource(role)
 		if err != nil {
 			return nil, "", outputAnnotations, fmt.Errorf("failed to create role resource: %w", err)
 		}
@@ -83,7 +82,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 		userResource := &v2.Resource{
 			Id: &v2.ResourceId{
 				ResourceType: userResourceType.Id,
-				Resource:     roleAssignment,
+				Resource:     *roleAssignment,
 			},
 		}
 

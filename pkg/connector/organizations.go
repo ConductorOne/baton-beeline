@@ -37,8 +37,7 @@ func (o *organizationBuilder) List(ctx context.Context, parentResourceID *v2.Res
 
 	resources := make([]*v2.Resource, 0, len(organizations))
 	for _, organization := range organizations {
-		organizationCopy := organization
-		organizationResource, err := organizationResource(&organizationCopy)
+		organizationResource, err := organizationResource(organization)
 		if err != nil {
 			return nil, "", outputAnnotations, fmt.Errorf("failed to create organization resource: %w", err)
 		}

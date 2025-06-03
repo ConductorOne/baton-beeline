@@ -37,8 +37,7 @@ func (o *userBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagina
 
 	resources := make([]*v2.Resource, 0, len(users))
 	for _, user := range users {
-		userCopy := user
-		userResource, err := userResource(&userCopy)
+		userResource, err := userResource(user)
 		if err != nil {
 			return nil, "", outputAnnotations, fmt.Errorf("failed to create user resource: %w", err)
 		}

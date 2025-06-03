@@ -2,15 +2,13 @@ package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
-	"time"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 const (
@@ -23,48 +21,44 @@ const (
 )
 
 type Client struct {
-	baseAPIURL  *url.URL
-	httpClient  *uhttp.BaseHttpClient
-	tokenSource oauth2.TokenSource
+	baseAPIURL *url.URL
+	httpClient *uhttp.BaseHttpClient
 }
 
 // NewClient creates a new BeelineClient.
-func NewClient(ctx context.Context, baseURL, authServerURL, clientSiteID, clientID, clientSecret string) (*Client, error) {
-	if clientSiteID == "" || clientID == "" || clientSecret == "" {
-		return nil, errors.New("clientSiteID, clientID, and clientSecret are required")
+func NewClient(ctx context.Context, baseURL, authServerURL, beelineClientID, beelineClientSecret, beelineClientSiteID string) (*Client, error) {
+	// Set up client credentials config.
+	config := &clientcredentials.Config{
+		EndpointParams: url.Values{
+			"audience": {baseURL},
+		},
+		ClientID:     beelineClientID,
+		ClientSecret: beelineClientSecret,
+		TokenURL:     authServerURL,
 	}
 
-	// Create base HTTP client with longer timeout for API operations
-	httpClient, err := uhttp.NewBaseHttpClientWithContext(ctx, &http.Client{
-		Timeout: 60 * time.Second, // Increased from 30s to 60s for longer operations
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error creating http client: %w", err)
-	}
+	// Create token source
+	tokenSource := config.TokenSource(ctx)
+
+	// Create HTTP client with automatic token handling
+	oauthClient := oauth2.NewClient(ctx, tokenSource)
 
 	// Create base API URL
-	clientAPIURL, err := url.Parse(fmt.Sprintf(apiURLTemplate, baseURL, clientSiteID))
+	clientAPIURL, err := url.Parse(fmt.Sprintf(apiURLTemplate, baseURL, beelineClientSiteID))
 	if err != nil {
 		return nil, fmt.Errorf("error parsing base API URL: %w", err)
 	}
 
-	// Create token source
-	tokenSource, err := newTokenSource(authServerURL, clientID, clientSecret, clientAPIURL, httpClient.HttpClient)
-	if err != nil {
-		return nil, fmt.Errorf("error creating token source: %w", err)
-	}
-
 	client := &Client{
-		baseAPIURL:  clientAPIURL,
-		httpClient:  httpClient,
-		tokenSource: tokenSource,
+		baseAPIURL: clientAPIURL,
+		httpClient: uhttp.NewBaseHttpClient(oauthClient),
 	}
 
 	return client, nil
 }
 
 func (c *Client) listOrganizations(ctx context.Context, pageNumber uint) (
-	[]OrganizationResponse,
+	[]*OrganizationResponse,
 	*uint,
 	*v2.RateLimitDescription,
 	error,
@@ -74,8 +68,8 @@ func (c *Client) listOrganizations(ctx context.Context, pageNumber uint) (
 	path := "/organizations"
 
 	var response struct {
-		MaxItems int                    `json:"maxItems"`
-		Value    []OrganizationResponse `json:"value"`
+		MaxItems int                     `json:"maxItems"`
+		Value    []*OrganizationResponse `json:"value"`
 	}
 
 	pageSize := uint(ResourcesPageSize)
@@ -89,13 +83,13 @@ func (c *Client) listOrganizations(ctx context.Context, pageNumber uint) (
 		return nil, nil, rateLimit, fmt.Errorf("error executing request: %w", err)
 	}
 
-	nextPageNumber := GetNextPageNumber(len(response.Value), pageNumber)
+	nextPageNumber := getNextPageNumber(len(response.Value), pageNumber)
 
 	return response.Value, nextPageNumber, rateLimit, nil
 }
 
 func (c *Client) listUsers(ctx context.Context, pageNumber uint) (
-	[]UserResponse,
+	[]*UserResponse,
 	*uint,
 	*v2.RateLimitDescription,
 	error,
@@ -104,10 +98,7 @@ func (c *Client) listUsers(ctx context.Context, pageNumber uint) (
 	// Required scopes: read:user write:user
 	path := "/users"
 
-	var response struct {
-		MaxItems int            `json:"maxItems"`
-		Value    []UserResponse `json:"value"`
-	}
+	var response ApiResponse[UserResponse]
 
 	pageSize := uint(ResourcesPageSize)
 	url, err := c.constructURL(path, nil, nil, &pageNumber, &pageSize)
@@ -120,13 +111,13 @@ func (c *Client) listUsers(ctx context.Context, pageNumber uint) (
 		return nil, nil, rateLimit, fmt.Errorf("error executing request: %w", err)
 	}
 
-	nextPageNumber := GetNextPageNumber(len(response.Value), pageNumber)
+	nextPageNumber := getNextPageNumber(len(response.Value), pageNumber)
 
 	return response.Value, nextPageNumber, rateLimit, nil
 }
 
 func (c *Client) listRoles(ctx context.Context, pageNumber uint) (
-	[]RoleResponse,
+	[]*RoleResponse,
 	*uint,
 	*v2.RateLimitDescription,
 	error,
@@ -135,10 +126,7 @@ func (c *Client) listRoles(ctx context.Context, pageNumber uint) (
 	// Required scopes: read:iam write:iam
 	path := "/roles"
 
-	var response struct {
-		MaxItems int            `json:"maxItems"`
-		Value    []RoleResponse `json:"value"`
-	}
+	var response ApiResponse[RoleResponse]
 
 	pageSize := uint(ResourcesPageSize)
 	url, err := c.constructURL(path, nil, nil, &pageNumber, &pageSize)
@@ -151,26 +139,23 @@ func (c *Client) listRoles(ctx context.Context, pageNumber uint) (
 		return nil, nil, rateLimit, fmt.Errorf("error executing request: %w", err)
 	}
 
-	nextPageNumber := GetNextPageNumber(len(response.Value), pageNumber)
+	nextPageNumber := getNextPageNumber(len(response.Value), pageNumber)
 
 	return response.Value, nextPageNumber, rateLimit, nil
 }
 
 func (c *Client) listRoleAssignments(ctx context.Context, roleCode string, pageNumber uint) (
-	[]string,
+	[]*string,
 	*uint,
 	*v2.RateLimitDescription,
 	error,
 ) {
 	// Doc: https://developers.beeline.com/core_2023-02-28#tag/Identity-and-Access-Management/operation/get-iam-users-by-role
 	// Required scopes: read:iam write:iam
-	path := "/roles/{roleCode}/users"
+	path := "/roles/{{.roleCode}}/users"
 	pathParameters := map[string]string{"roleCode": roleCode}
 
-	var response struct {
-		MaxItems int      `json:"maxItems"`
-		Value    []string `json:"value"` // list of userIds
-	}
+	var response ApiResponse[string]
 
 	pageSize := uint(ResourcesPageSize)
 	url, err := c.constructURL(path, pathParameters, nil, &pageNumber, &pageSize)
@@ -183,7 +168,7 @@ func (c *Client) listRoleAssignments(ctx context.Context, roleCode string, pageN
 		return nil, nil, rateLimit, fmt.Errorf("error executing request: %w", err)
 	}
 
-	nextPageNumber := GetNextPageNumber(len(response.Value), pageNumber)
+	nextPageNumber := getNextPageNumber(len(response.Value), pageNumber)
 
 	return response.Value, nextPageNumber, rateLimit, nil
 }
@@ -194,7 +179,7 @@ func (c *Client) assignRoleToUser(ctx context.Context, roleCode string, userID s
 ) {
 	// Doc: https://developers.beeline.com/core_2023-02-28#tag/Identity-and-Access-Management/operation/post-iam-add-user
 	// Required scopes: write:iam
-	path := "/roles/{roleCode}/users/add"
+	path := "/roles/{{.roleCode}}/users/add"
 	pathParameters := map[string]string{"roleCode": roleCode}
 
 	url, err := c.constructURL(path, pathParameters, nil, nil, nil)
@@ -218,7 +203,7 @@ func (c *Client) removeRoleFromUser(ctx context.Context, roleCode string, userID
 ) {
 	// Doc: https://developers.beeline.com/core_2023-02-28#tag/Identity-and-Access-Management/operation/post-iam-remove-user
 	// Required scopes: write:iam
-	path := "/roles/{roleCode}/users/remove"
+	path := "/roles/{{.roleCode}}/users/remove"
 	pathParameters := map[string]string{"roleCode": roleCode}
 
 	url, err := c.constructURL(path, pathParameters, nil, nil, nil)

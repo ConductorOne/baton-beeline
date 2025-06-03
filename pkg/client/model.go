@@ -2,6 +2,11 @@ package client
 
 import "fmt"
 
+type ApiResponse[T any] struct {
+	MaxItems int  `json:"maxItems"`
+	Value    []*T `json:"value"`
+}
+
 type OrganizationResponse struct {
 	OrganizationCode string  `json:"organizationCode"`
 	DisplayName      string  `json:"displayName"`

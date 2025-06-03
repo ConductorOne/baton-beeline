@@ -250,14 +250,14 @@ func (s *server) siteDispatcher(w http.ResponseWriter, r *http.Request) {
 
 	resource := segments[1]
 
-	switch {
-	case resource == resourceUsers:
+	switch resource {
+	case resourceUsers:
 		s.handleUsers(w, r)
 
-	case resource == resourceOrganizations:
+	case resourceOrganizations:
 		s.handleOrganizations(w, r)
 
-	case resource == resourceRoles:
+	case resourceRoles:
 		// Extract roleCode if it exists
 		roleCode := ""
 		if len(segments) > 2 {

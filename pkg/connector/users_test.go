@@ -9,6 +9,7 @@ import (
 	"github.com/conductorone/baton-beeline/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
+	"github.com/conductorone/baton-sdk/pkg/test"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -36,7 +37,7 @@ func TestUsersList(t *testing.T) {
 			ctx context.Context,
 			pageNumber uint,
 		) (
-			[]client.UserResponse,
+			[]*client.UserResponse,
 			*uint,
 			*v2.RateLimitDescription,
 			error,
@@ -73,7 +74,7 @@ func TestUsersList(t *testing.T) {
 			ctx context.Context,
 			pageNumber uint,
 		) (
-			[]client.UserResponse,
+			[]*client.UserResponse,
 			*uint,
 			*v2.RateLimitDescription,
 			error,
@@ -93,13 +94,13 @@ func TestUsersList(t *testing.T) {
 			ctx context.Context,
 			pageNumber uint,
 		) (
-			[]client.UserResponse,
+			[]*client.UserResponse,
 			*uint,
 			*v2.RateLimitDescription,
 			error,
 		) {
 			email := "marcos@conductorone.com"
-			users := []client.UserResponse{
+			users := []*client.UserResponse{
 				{
 					UserID:           "1",
 					UserName:         "mgarcia",
@@ -124,7 +125,7 @@ func TestUsersList(t *testing.T) {
 		require.NotEmpty(t, resources[0].Id)
 
 		require.NotNil(t, token)
-		AssertNoRatelimitAnnotations(t, annotations)
+		test.AssertNoRatelimitAnnotations(t, annotations)
 		require.Nil(t, err)
 	})
 }
