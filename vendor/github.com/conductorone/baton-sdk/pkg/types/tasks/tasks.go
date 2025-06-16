@@ -88,6 +88,7 @@ const (
 	ListGrantsType
 	GetMetadataType
 	ListEventsType
+	ListEventFeedsType
 	StartDebugging
 	BulkCreateTicketsType
 	BulkGetTicketsType
@@ -95,4 +96,5 @@ const (
 	ActionGetSchemaType
 	ActionInvokeType
 	ActionStatusType
+	CreateSyncDiff
 )
