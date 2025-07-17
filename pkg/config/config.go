@@ -1,61 +1,55 @@
-package main
+package config
 
 import (
 	"github.com/conductorone/baton-sdk/pkg/field"
-	"github.com/spf13/viper"
 )
 
 var (
 	baseURLField = field.StringField(
 		"base-url",
+		field.WithDisplayName("Base URL"),
 		field.WithDescription("The Beeline base URL."),
 		field.WithRequired(false),
 		field.WithDefaultValue("https://client.beeline.com"),
 	)
 	beelineClientSiteIDField = field.StringField(
 		"beeline-client-site-id",
+		field.WithDisplayName("Client Site ID"),
 		field.WithDescription("The Beeline client site ID."),
 		field.WithRequired(true),
 	)
 	beelineClientIDField = field.StringField(
 		"beeline-client-id",
+		field.WithDisplayName("Client ID"),
 		field.WithDescription("The OAuth2 client ID for Beeline API access."),
 		field.WithRequired(true),
 	)
 	beelineClientSecretField = field.StringField(
 		"beeline-client-secret",
+		field.WithDisplayName("Client Secret"),
 		field.WithDescription("The OAuth2 client secret for Beeline API access."),
 		field.WithRequired(true),
+		field.WithIsSecret(true),
 	)
 	authServerURLField = field.StringField(
 		"auth-server-url",
+		field.WithDisplayName("Auth Server URL"),
 		field.WithDescription("The Beeline auth server URL."),
 		field.WithRequired(false),
 		field.WithDefaultValue("https://integrations.auth.beeline.com/oauth/token"),
 	)
+)
 
-	// ConfigurationFields defines the external configuration required for the
-	// connector to run. Note: these fields can be marked as optional or
-	// required.
-	ConfigurationFields = []field.SchemaField{
+//go:generate go run ./gen
+var Config = field.NewConfiguration(
+	[]field.SchemaField{
 		baseURLField,
+		authServerURLField,
 		beelineClientSiteIDField,
 		beelineClientIDField,
 		beelineClientSecretField,
-		authServerURLField,
-	}
-
-	// FieldRelationships defines relationships between the fields listed in
-	// ConfigurationFields that can be automatically validated. For example, a
-	// username and password can be required together, or an access token can be
-	// marked as mutually exclusive from the username password pair.
-	FieldRelationships = []field.SchemaFieldRelationship{}
+	},
+	field.WithConnectorDisplayName("Beeline"),
+	field.WithHelpUrl("/docs/baton/beeline"),
+	field.WithIconUrl("/static/app-icons/beeline.svg"),
 )
-
-// ValidateConfig is run after the configuration is loaded, and should return an
-// error if it isn't valid. Implementing this function is optional, it only
-// needs to perform extra validations that cannot be encoded with configuration
-// parameters.
-func ValidateConfig(v *viper.Viper) error {
-	return nil
-}
