@@ -1,8 +1,6 @@
 module github.com/conductorone/baton-beeline
 
-go 1.23.4
-
-toolchain go1.23.9
+go 1.27.3
 
 require (
 	github.com/conductorone/baton-sdk v0.3.15
