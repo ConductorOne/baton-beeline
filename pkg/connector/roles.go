@@ -177,15 +177,12 @@ func roleResource(role *client.RoleResponse) (*v2.Resource, error) {
 		"role_description": description,
 	}
 
-	roleTraitOptions := []rs.RoleTraitOption{
-		rs.WithRoleProfile(profile),
-	}
-
 	resource, err := rs.NewRoleResource(
 		role.DisplayName,
 		roleResourceType,
 		role.RoleCode,
-		roleTraitOptions,
+		nil,
+		rs.WithResourceProfile(profile),
 	)
 	if err != nil {
 		return nil, err

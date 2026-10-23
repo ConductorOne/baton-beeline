@@ -193,14 +193,14 @@ func requestLoggerMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		next.ServeHTTP(ww, r)
 
 		duration := time.Since(start)
-		log.Printf( //nolint:gosec // G706: local test server; request values are quoted with %q
-			"method=%q path=%q status=%d duration=%s remote_addr=%q user_agent=%q",
-			r.Method,
-			r.URL.Path,
+		log.Printf(
+			"method=%s path=%s status=%d duration=%s remote_addr=%s user_agent=%s",
+			strconv.Quote(r.Method),
+			strconv.Quote(r.URL.Path),
 			ww.statusCode,
 			duration,
-			r.RemoteAddr,
-			r.UserAgent(),
+			strconv.Quote(r.RemoteAddr),
+			strconv.Quote(r.UserAgent()),
 		)
 	}
 }
@@ -964,9 +964,9 @@ func logRequest(endpoint string, r *http.Request) {
 	log.Printf("=== INCOMING REQUEST ===")
 	log.Printf("Timestamp: %s", time.Now().Format(time.RFC3339))
 	log.Printf("Endpoint: %s", endpoint)
-	log.Printf("Method: %q", r.Method)                 //nolint:gosec // G706: local test server; request values are quoted with %q
-	log.Printf("URL: %q", r.URL.String())              //nolint:gosec // G706: local test server; request values are quoted with %q
-	log.Printf("Query parameters: %q", r.URL.RawQuery) //nolint:gosec // G706: local test server; request values are quoted with %q
+	log.Printf("Method: %s", strconv.Quote(r.Method))
+	log.Printf("URL: %s", strconv.Quote(r.URL.String()))
+	log.Printf("Query parameters: %s", strconv.Quote(r.URL.RawQuery))
 
 	log.Println("Headers:")
 	for name, values := range r.Header {
@@ -991,7 +991,7 @@ func logRequest(endpoint string, r *http.Request) {
 func logResponse(endpoint string, statusCode int, headers http.Header, body []byte) {
 	log.Printf("=== OUTGOING RESPONSE ===")
 	log.Printf("Timestamp: %s", time.Now().Format(time.RFC3339))
-	log.Printf("Endpoint: %q", endpoint) //nolint:gosec // G706: local test server; request values are quoted with %q
+	log.Printf("Endpoint: %s", strconv.Quote(endpoint))
 	log.Printf("Status Code: %d", statusCode)
 
 	log.Println("Headers:")
