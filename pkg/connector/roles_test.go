@@ -9,6 +9,7 @@ import (
 	"github.com/conductorone/baton-beeline/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
+	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/conductorone/baton-sdk/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -50,16 +51,16 @@ func TestRolesList(t *testing.T) {
 			return nil, nil, &rateLimitData, err
 		}
 
-		resources, token, annotations, err := roleBuilder.List(ctx, nil, &pagination.Token{})
+		resources, results, err := roleBuilder.List(ctx, nil, rs.SyncOpAttrs{})
 
 		require.Nil(t, resources)
-		require.Empty(t, token)
+		require.Empty(t, results.NextPageToken)
 		require.NotNil(t, err)
 
 		// There should be annotations.
-		require.Len(t, annotations, 1)
+		require.Len(t, results.Annotations, 1)
 		rateLimitData := v2.RateLimitDescription{}
-		err = annotations[0].UnmarshalTo(&rateLimitData)
+		err = results.Annotations[0].UnmarshalTo(&rateLimitData)
 		if err != nil {
 			t.Errorf("couldn't unmarshal the ratelimit annotation")
 		}
@@ -84,7 +85,7 @@ func TestRolesList(t *testing.T) {
 			return nil, nil, nil, nil
 		}
 
-		_, _, _, _ = roleBuilder.List(ctx, nil, &pagination.Token{Token: startToken})
+		_, _, _ = roleBuilder.List(ctx, nil, rs.SyncOpAttrs{PageToken: pagination.Token{Token: startToken}})
 	})
 
 	t.Run("should get roles", func(t *testing.T) {
@@ -111,15 +112,15 @@ func TestRolesList(t *testing.T) {
 			return roles, nil, nil, nil
 		}
 
-		resources, token, annotations, err := roleBuilder.List(ctx, nil, &pagination.Token{})
+		resources, results, err := roleBuilder.List(ctx, nil, rs.SyncOpAttrs{})
 
 		// Assert the returned role has an ID.
 		require.NotNil(t, resources)
 		require.Len(t, resources, 1)
 		require.NotEmpty(t, resources[0].Id)
 
-		require.NotNil(t, token)
-		test.AssertNoRatelimitAnnotations(t, annotations)
+		require.NotNil(t, results)
+		test.AssertNoRatelimitAnnotations(t, results.Annotations)
 		require.Nil(t, err)
 	})
 }

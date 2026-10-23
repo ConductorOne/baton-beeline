@@ -6,11 +6,13 @@ import (
 
 	"github.com/conductorone/baton-beeline/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
+	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 )
+
+var _ connectorbuilder.ResourceSyncerV2 = (*userBuilder)(nil)
 
 type userBuilder struct {
 	service client.ClientService
@@ -22,39 +24,39 @@ func (o *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 
 // List returns all the users from the database as resource objects.
 // Users include a UserTrait because they are the 'shape' of a standard user.
-func (o *userBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
-	pageNumber, err := parsePageToken(pToken.Token)
+func (o *userBuilder) List(ctx context.Context, _ *v2.ResourceId, opts rs.SyncOpAttrs) ([]*v2.Resource, *rs.SyncOpResults, error) {
+	pageNumber, err := parsePageToken(opts.PageToken.Token)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("error parsing page token: %w", err)
+		return nil, nil, fmt.Errorf("error parsing page token: %w", err)
 	}
 
 	outputAnnotations := annotations.New()
 	users, nextPageNumber, rateLimit, err := o.service.ListUsers(ctx, pageNumber)
 	outputAnnotations.WithRateLimiting(rateLimit)
 	if err != nil {
-		return nil, "", outputAnnotations, fmt.Errorf("failed to list users: %w", err)
+		return nil, &rs.SyncOpResults{Annotations: outputAnnotations}, fmt.Errorf("failed to list users: %w", err)
 	}
 
 	resources := make([]*v2.Resource, 0, len(users))
 	for _, user := range users {
 		userResource, err := userResource(user)
 		if err != nil {
-			return nil, "", outputAnnotations, fmt.Errorf("failed to create user resource: %w", err)
+			return nil, &rs.SyncOpResults{Annotations: outputAnnotations}, fmt.Errorf("failed to create user resource: %w", err)
 		}
 		resources = append(resources, userResource)
 	}
 
-	return resources, createPageToken(nextPageNumber), outputAnnotations, nil
+	return resources, &rs.SyncOpResults{NextPageToken: createPageToken(nextPageNumber), Annotations: outputAnnotations}, nil
 }
 
 // Entitlements always returns an empty slice for users.
-func (o *userBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+func (o *userBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ rs.SyncOpAttrs) ([]*v2.Entitlement, *rs.SyncOpResults, error) {
+	return nil, nil, nil
 }
 
 // Grants emits a grant for the organization that the user belongs to.
 // This is more efficient than emitting organization grants in the organization resource.
-func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, opts rs.SyncOpAttrs) ([]*v2.Grant, *rs.SyncOpResults, error) {
 	var rv []*v2.Grant
 	organizationResource := &v2.Resource{
 		Id: &v2.ResourceId{
@@ -69,7 +71,7 @@ func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 		resource,
 	))
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
 func newUserBuilder(cclient *client.Client) *userBuilder {
