@@ -195,12 +195,12 @@ func requestLoggerMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		duration := time.Since(start)
 		log.Printf(
 			"method=%s path=%s status=%d duration=%s remote_addr=%s user_agent=%s",
-			r.Method,
-			r.URL.Path,
+			strconv.Quote(r.Method),
+			strconv.Quote(r.URL.Path),
 			ww.statusCode,
 			duration,
-			r.RemoteAddr,
-			r.UserAgent(),
+			strconv.Quote(r.RemoteAddr),
+			strconv.Quote(r.UserAgent()),
 		)
 	}
 }
@@ -964,9 +964,9 @@ func logRequest(endpoint string, r *http.Request) {
 	log.Printf("=== INCOMING REQUEST ===")
 	log.Printf("Timestamp: %s", time.Now().Format(time.RFC3339))
 	log.Printf("Endpoint: %s", endpoint)
-	log.Printf("Method: %s", r.Method)
-	log.Printf("URL: %s", r.URL.String())
-	log.Printf("Query parameters: %s", r.URL.RawQuery)
+	log.Printf("Method: %s", strconv.Quote(r.Method))
+	log.Printf("URL: %s", strconv.Quote(r.URL.String()))
+	log.Printf("Query parameters: %s", strconv.Quote(r.URL.RawQuery))
 
 	log.Println("Headers:")
 	for name, values := range r.Header {
@@ -991,7 +991,7 @@ func logRequest(endpoint string, r *http.Request) {
 func logResponse(endpoint string, statusCode int, headers http.Header, body []byte) {
 	log.Printf("=== OUTGOING RESPONSE ===")
 	log.Printf("Timestamp: %s", time.Now().Format(time.RFC3339))
-	log.Printf("Endpoint: %s", endpoint)
+	log.Printf("Endpoint: %s", strconv.Quote(endpoint))
 	log.Printf("Status Code: %d", statusCode)
 
 	log.Println("Headers:")

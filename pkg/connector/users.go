@@ -99,10 +99,7 @@ func userResource(user *client.UserResponse) (*v2.Resource, error) {
 		profile["title"] = *user.Title
 	}
 
-	userTraitOptions := []rs.UserTraitOption{
-		rs.WithUserProfile(profile),
-		rs.WithStatus(v2.UserTrait_Status_STATUS_ENABLED),
-	}
+	var userTraitOptions []rs.UserTraitOption
 
 	// Add email trait only if email exists
 	if user.Email != nil {
@@ -114,6 +111,8 @@ func userResource(user *client.UserResponse) (*v2.Resource, error) {
 		userResourceType,
 		user.UserID,
 		userTraitOptions,
+		rs.WithResourceProfile(profile),
+		rs.WithResourceStatus(v2.Status_RESOURCE_STATUS_ENABLED, ""),
 		rs.WithParentResourceID(&v2.ResourceId{
 			ResourceType: organizationResourceType.Id,
 			Resource:     user.OrganizationCode,
