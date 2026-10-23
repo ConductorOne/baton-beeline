@@ -87,22 +87,19 @@ func organizationResource(organization *client.OrganizationResponse) (*v2.Resour
 		description = *organization.Description
 	}
 
-	// Create profile map for the group trait
+	// Create profile map for the resource
 	profile := map[string]interface{}{
 		"organization_code": organization.OrganizationCode,
 		"display_name":      organization.DisplayName,
 		"description":       description,
 	}
 
-	groupTraitOptions := []rs.GroupTraitOption{
-		rs.WithGroupProfile(profile),
-	}
-
 	resource, err := rs.NewGroupResource(
 		organization.DisplayName,
 		organizationResourceType,
 		organization.OrganizationCode,
-		groupTraitOptions,
+		nil,
+		rs.WithResourceProfile(profile),
 		rs.WithDescription(description),
 	)
 	if err != nil {
