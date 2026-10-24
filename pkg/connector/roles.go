@@ -6,8 +6,8 @@ import (
 
 	"github.com/conductorone/baton-beeline/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
+	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
@@ -17,6 +17,8 @@ import (
 
 const roleAssignmentEntitlement = "assigned"
 
+var _ connectorbuilder.ResourceSyncerV2 = (*roleBuilder)(nil)
+
 type roleBuilder struct {
 	service client.ClientService
 }
@@ -25,32 +27,32 @@ func (o *roleBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 	return roleResourceType
 }
 
-func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
-	pageNumber, err := parsePageToken(pToken.Token)
+func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, opts rs.SyncOpAttrs) ([]*v2.Resource, *rs.SyncOpResults, error) {
+	pageNumber, err := parsePageToken(opts.PageToken.Token)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("error parsing page token: %w", err)
+		return nil, nil, fmt.Errorf("error parsing page token: %w", err)
 	}
 
 	outputAnnotations := annotations.New()
 	roles, nextPageNumber, rateLimit, err := o.service.ListRoles(ctx, pageNumber)
 	outputAnnotations.WithRateLimiting(rateLimit)
 	if err != nil {
-		return nil, "", outputAnnotations, fmt.Errorf("failed to list roles: %w", err)
+		return nil, &rs.SyncOpResults{Annotations: outputAnnotations}, fmt.Errorf("failed to list roles: %w", err)
 	}
 
 	resources := make([]*v2.Resource, 0, len(roles))
 	for _, role := range roles {
 		roleResource, err := roleResource(role)
 		if err != nil {
-			return nil, "", outputAnnotations, fmt.Errorf("failed to create role resource: %w", err)
+			return nil, &rs.SyncOpResults{Annotations: outputAnnotations}, fmt.Errorf("failed to create role resource: %w", err)
 		}
 		resources = append(resources, roleResource)
 	}
 
-	return resources, createPageToken(nextPageNumber), outputAnnotations, nil
+	return resources, &rs.SyncOpResults{NextPageToken: createPageToken(nextPageNumber), Annotations: outputAnnotations}, nil
 }
 
-func (o *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (o *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, opts rs.SyncOpAttrs) ([]*v2.Entitlement, *rs.SyncOpResults, error) {
 	var rv []*v2.Entitlement
 
 	assignmentOptions := []ent.EntitlementOption{
@@ -61,20 +63,20 @@ func (o *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, p
 
 	rv = append(rv, ent.NewAssignmentEntitlement(resource, roleAssignmentEntitlement, assignmentOptions...))
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
-func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
-	pageNumber, err := parsePageToken(pToken.Token)
+func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, opts rs.SyncOpAttrs) ([]*v2.Grant, *rs.SyncOpResults, error) {
+	pageNumber, err := parsePageToken(opts.PageToken.Token)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("error parsing page token: %w", err)
+		return nil, nil, fmt.Errorf("error parsing page token: %w", err)
 	}
 
 	outputAnnotations := annotations.New()
 	roleAssignments, nextPageNumber, rateLimit, err := o.service.ListRoleAssignments(ctx, resource.Id.Resource, pageNumber)
 	outputAnnotations.WithRateLimiting(rateLimit)
 	if err != nil {
-		return nil, "", outputAnnotations, fmt.Errorf("failed to list role assignments: %w", err)
+		return nil, &rs.SyncOpResults{Annotations: outputAnnotations}, fmt.Errorf("failed to list role assignments: %w", err)
 	}
 
 	rv := make([]*v2.Grant, 0, len(roleAssignments))
@@ -89,7 +91,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 		rv = append(rv, grant.NewGrant(resource, roleAssignmentEntitlement, userResource))
 	}
 
-	return rv, createPageToken(nextPageNumber), outputAnnotations, nil
+	return rv, &rs.SyncOpResults{NextPageToken: createPageToken(nextPageNumber), Annotations: outputAnnotations}, nil
 }
 
 func (o *roleBuilder) Grant(
