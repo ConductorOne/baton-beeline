@@ -18,11 +18,11 @@ type ClientService interface {
 
 // ClientServiceImpl is the default implementation that calls the actual API.
 type ClientServiceImpl struct {
-	client Client
+	client *Client
 }
 
 func NewClientService(client *Client) ClientService {
-	return &ClientServiceImpl{client: *client}
+	return &ClientServiceImpl{client: client}
 }
 
 func (s *ClientServiceImpl) ListUsers(ctx context.Context, pageNumber uint) ([]*UserResponse, *uint, *v2.RateLimitDescription, error) {

@@ -1,21 +1,116 @@
 {
-  "@type":  "type.googleapis.com/c1.connector.v2.ConnectorCapabilities",
-  "resourceTypeCapabilities":  [
+  "@type": "type.googleapis.com/c1.connector.v2.ConnectorCapabilities",
+  "resourceTypeCapabilities": [
     {
-      "resourceType":  {
-        "id":  "user",
-        "displayName":  "User",
-        "traits":  [
-          "TRAIT_USER"
+      "resourceType": {
+        "id": "organization",
+        "displayName": "Organization",
+        "traits": [
+          "TRAIT_GROUP"
+        ],
+        "annotations": [
+          {
+            "@type": "type.googleapis.com/c1.connector.v2.CapabilityPermissions",
+            "permissions": [
+              {
+                "permission": "read:org"
+              },
+              {
+                "permission": "write:org"
+              }
+            ]
+          }
         ]
       },
-      "capabilities":  [
+      "capabilities": [
         "CAPABILITY_SYNC"
-      ]
+      ],
+      "permissions": {
+        "permissions": [
+          {
+            "permission": "read:org"
+          },
+          {
+            "permission": "write:org"
+          }
+        ]
+      }
+    },
+    {
+      "resourceType": {
+        "id": "role",
+        "displayName": "Role",
+        "traits": [
+          "TRAIT_ROLE"
+        ],
+        "annotations": [
+          {
+            "@type": "type.googleapis.com/c1.connector.v2.CapabilityPermissions",
+            "permissions": [
+              {
+                "permission": "read:iam"
+              },
+              {
+                "permission": "write:iam"
+              }
+            ]
+          }
+        ]
+      },
+      "capabilities": [
+        "CAPABILITY_SYNC",
+        "CAPABILITY_PROVISION"
+      ],
+      "permissions": {
+        "permissions": [
+          {
+            "permission": "read:iam"
+          },
+          {
+            "permission": "write:iam"
+          }
+        ]
+      }
+    },
+    {
+      "resourceType": {
+        "id": "user",
+        "displayName": "User",
+        "traits": [
+          "TRAIT_USER"
+        ],
+        "annotations": [
+          {
+            "@type": "type.googleapis.com/c1.connector.v2.CapabilityPermissions",
+            "permissions": [
+              {
+                "permission": "read:user"
+              },
+              {
+                "permission": "write:user"
+              }
+            ]
+          }
+        ]
+      },
+      "capabilities": [
+        "CAPABILITY_SYNC"
+      ],
+      "permissions": {
+        "permissions": [
+          {
+            "permission": "read:user"
+          },
+          {
+            "permission": "write:user"
+          }
+        ]
+      }
     }
   ],
-  "connectorCapabilities":  [
+  "connectorCapabilities": [
+    "CAPABILITY_PROVISION",
     "CAPABILITY_SYNC"
   ],
-  "credentialDetails":  {}
+  "credentialDetails": {}
 }
