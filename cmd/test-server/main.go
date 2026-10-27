@@ -30,7 +30,10 @@ const (
 
 // Config holds all configuration for the server.
 type config struct {
+	host            string
 	port            string
+	clientID        string
+	clientSecret    string
 	readTimeout     time.Duration
 	writeTimeout    time.Duration
 	idleTimeout     time.Duration
@@ -42,7 +45,10 @@ type config struct {
 // defaultConfig returns a config with sensible defaults.
 func defaultConfig() *config {
 	return &config{
+		host:            "",
 		port:            "8080",
+		clientID:        "test-client",
+		clientSecret:    "test-secret",
 		readTimeout:     10 * time.Second,
 		writeTimeout:    10 * time.Second,
 		idleTimeout:     30 * time.Second,
@@ -360,7 +366,7 @@ func (s *server) Start() error {
 	apiHandler("/api/sites/", s.siteDispatcher)
 
 	server := &http.Server{
-		Addr:              ":" + s.config.port,
+		Addr:              s.config.host + ":" + s.config.port,
 		Handler:           mux,
 		ReadTimeout:       s.config.readTimeout,
 		WriteTimeout:      s.config.writeTimeout,
@@ -474,7 +480,7 @@ func (s *server) handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if clientID == "" || clientSecret == "" {
+	if clientID != s.config.clientID || clientSecret != s.config.clientSecret {
 		sendErrorResponse(w, r, http.StatusUnauthorized, "invalid_client", "Invalid client credentials", nil, s.config)
 		return
 	}
@@ -1011,6 +1017,15 @@ func run() error {
 	// Allow port override via environment variable
 	if port := os.Getenv("PORT"); port != "" {
 		config.port = port
+	}
+	if host := os.Getenv("HOST"); host != "" {
+		config.host = host
+	}
+	if clientID := os.Getenv("TEST_CLIENT_ID"); clientID != "" {
+		config.clientID = clientID
+	}
+	if clientSecret := os.Getenv("TEST_CLIENT_SECRET"); clientSecret != "" {
+		config.clientSecret = clientSecret
 	}
 
 	server := newServer(config)
