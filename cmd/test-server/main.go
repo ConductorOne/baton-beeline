@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -30,7 +32,10 @@ const (
 
 // Config holds all configuration for the server.
 type config struct {
+	host            string
 	port            string
+	clientID        string
+	clientSecret    string
 	readTimeout     time.Duration
 	writeTimeout    time.Duration
 	idleTimeout     time.Duration
@@ -42,7 +47,10 @@ type config struct {
 // defaultConfig returns a config with sensible defaults.
 func defaultConfig() *config {
 	return &config{
+		host:            "",
 		port:            "8080",
+		clientID:        "test-client",
+		clientSecret:    "test-secret",
 		readTimeout:     10 * time.Second,
 		writeTimeout:    10 * time.Second,
 		idleTimeout:     30 * time.Second,
@@ -360,7 +368,7 @@ func (s *server) Start() error {
 	apiHandler("/api/sites/", s.siteDispatcher)
 
 	server := &http.Server{
-		Addr:              ":" + s.config.port,
+		Addr:              net.JoinHostPort(s.config.host, s.config.port),
 		Handler:           mux,
 		ReadTimeout:       s.config.readTimeout,
 		WriteTimeout:      s.config.writeTimeout,
@@ -474,7 +482,7 @@ func (s *server) handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if clientID == "" || clientSecret == "" {
+	if clientID != s.config.clientID || clientSecret != s.config.clientSecret {
 		sendErrorResponse(w, r, http.StatusUnauthorized, "invalid_client", "Invalid client credentials", nil, s.config)
 		return
 	}
@@ -960,13 +968,20 @@ func sendJSONResponse(w http.ResponseWriter, r *http.Request, data interface{}, 
 	}
 }
 
+var clientSecretPattern = regexp.MustCompile(`(client_secret=)[^&\s]*`)
+
+// maskSecrets hides client_secret values before they are logged.
+func maskSecrets(s string) string {
+	return clientSecretPattern.ReplaceAllString(s, "${1}***")
+}
+
 func logRequest(endpoint string, r *http.Request) {
 	log.Printf("=== INCOMING REQUEST ===")
 	log.Printf("Timestamp: %s", time.Now().Format(time.RFC3339))
 	log.Printf("Endpoint: %s", endpoint)
 	log.Printf("Method: %s", strconv.Quote(r.Method))
-	log.Printf("URL: %s", strconv.Quote(r.URL.String()))
-	log.Printf("Query parameters: %s", strconv.Quote(r.URL.RawQuery))
+	log.Printf("URL: %s", strconv.Quote(maskSecrets(r.URL.String())))
+	log.Printf("Query parameters: %s", strconv.Quote(maskSecrets(r.URL.RawQuery)))
 
 	log.Println("Headers:")
 	for name, values := range r.Header {
@@ -978,7 +993,7 @@ func logRequest(endpoint string, r *http.Request) {
 	if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch {
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err == nil {
-			log.Printf("Request body:\n%s", string(bodyBytes))
+			log.Printf("Request body:\n%s", maskSecrets(string(bodyBytes)))
 			// Restore the body for further processing
 			r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 		} else {
@@ -1012,10 +1027,22 @@ func run() error {
 	if port := os.Getenv("PORT"); port != "" {
 		config.port = port
 	}
+	if host := os.Getenv("HOST"); host != "" {
+		config.host = host
+	}
+	if clientID := os.Getenv("TEST_CLIENT_ID"); clientID != "" {
+		config.clientID = clientID
+	}
+	if clientSecret := os.Getenv("TEST_CLIENT_SECRET"); clientSecret != "" {
+		config.clientSecret = clientSecret
+	}
 
 	server := newServer(config)
 
-	log.Printf("Starting test server with configuration: %+v", config)
+	// Don't log the client secret.
+	logConfig := *config
+	logConfig.clientSecret = "***"
+	log.Printf("Starting test server with configuration: %+v", logConfig)
 
 	return server.Start()
 }
