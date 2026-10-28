@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -967,13 +968,20 @@ func sendJSONResponse(w http.ResponseWriter, r *http.Request, data interface{}, 
 	}
 }
 
+var clientSecretPattern = regexp.MustCompile(`(client_secret=)[^&\s]*`)
+
+// maskSecrets hides client_secret values before they are logged.
+func maskSecrets(s string) string {
+	return clientSecretPattern.ReplaceAllString(s, "${1}***")
+}
+
 func logRequest(endpoint string, r *http.Request) {
 	log.Printf("=== INCOMING REQUEST ===")
 	log.Printf("Timestamp: %s", time.Now().Format(time.RFC3339))
 	log.Printf("Endpoint: %s", endpoint)
 	log.Printf("Method: %s", strconv.Quote(r.Method))
-	log.Printf("URL: %s", strconv.Quote(r.URL.String()))
-	log.Printf("Query parameters: %s", strconv.Quote(r.URL.RawQuery))
+	log.Printf("URL: %s", strconv.Quote(maskSecrets(r.URL.String())))
+	log.Printf("Query parameters: %s", strconv.Quote(maskSecrets(r.URL.RawQuery)))
 
 	log.Println("Headers:")
 	for name, values := range r.Header {
@@ -985,7 +993,7 @@ func logRequest(endpoint string, r *http.Request) {
 	if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch {
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err == nil {
-			log.Printf("Request body:\n%s", string(bodyBytes))
+			log.Printf("Request body:\n%s", maskSecrets(string(bodyBytes)))
 			// Restore the body for further processing
 			r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 		} else {
