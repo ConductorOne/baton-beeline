@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -366,7 +367,7 @@ func (s *server) Start() error {
 	apiHandler("/api/sites/", s.siteDispatcher)
 
 	server := &http.Server{
-		Addr:              s.config.host + ":" + s.config.port,
+		Addr:              net.JoinHostPort(s.config.host, s.config.port),
 		Handler:           mux,
 		ReadTimeout:       s.config.readTimeout,
 		WriteTimeout:      s.config.writeTimeout,
@@ -1030,7 +1031,10 @@ func run() error {
 
 	server := newServer(config)
 
-	log.Printf("Starting test server with configuration: %+v", config)
+	// Don't log the client secret.
+	logConfig := *config
+	logConfig.clientSecret = "***"
+	log.Printf("Starting test server with configuration: %+v", logConfig)
 
 	return server.Start()
 }
